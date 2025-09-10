@@ -1,4 +1,4 @@
-// services/api.service.ts
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ApiResponse<T = any> {
@@ -13,34 +13,27 @@ class ApiService {
 
  constructor() {
   this.baseURL = __DEV__ 
-    ? 'http://10.0.2.2:3000' // ✅ Sin /api
+    ? 'http://10.0.2.2:3000' 
     : 'https://tu-backend-production.com';
 }
 
-  /**
-   * Configurar token de autenticación
-   */
+ 
   setAuthToken(token: string): void {
     this.authToken = token;
   }
 
-  /**
-   * Remover token de autenticación
-   */
+ 
   removeAuthToken(): void {
     this.authToken = null;
   }
 
-  /**
-   * Obtener headers por defecto
-   */
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
 
-    // Agregar Authorization header si hay token
+  
     if (this.authToken) {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
@@ -48,9 +41,7 @@ class ApiService {
     return headers;
   }
 
-  /**
-   * Realizar request HTTP
-   */
+  
   private async request<T = any>(
     endpoint: string,
     options: RequestInit = {}
@@ -70,13 +61,13 @@ class ApiService {
     try {
       const response = await fetch(url, config);
       
-      // Log de respuesta para debug
+      
       console.log(`API Response: ${response.status} ${response.statusText}`);
 
       if (!response.ok) {
-        // Manejar errores específicos
+    
         if (response.status === 401) {
-          // Token expirado o inválido
+          
           this.removeAuthToken();
           await AsyncStorage.removeItem('@bomberos_auth_token');
           throw new Error('Sesión expirada. Por favor inicia sesión nuevamente.');
@@ -94,7 +85,7 @@ class ApiService {
           throw new Error('Error del servidor. Intenta nuevamente más tarde.');
         }
 
-        // Intentar obtener mensaje de error del servidor
+       
         try {
           const errorData = await response.json();
           throw new Error(errorData.message || `Error ${response.status}`);
@@ -103,12 +94,12 @@ class ApiService {
         }
       }
 
-      // Verificar si la respuesta tiene contenido JSON
+      
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         return await response.json();
       } else {
-        // Si no es JSON, devolver texto o respuesta vacía
+        
         const text = await response.text();
         return (text ? text : {}) as T;
       }
@@ -124,18 +115,14 @@ class ApiService {
     }
   }
 
-  /**
-   * GET request
-   */
+
   async get<T = any>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'GET',
     });
   }
 
-  /**
-   * POST request
-   */
+
   async post<T = any>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
@@ -143,9 +130,7 @@ class ApiService {
     });
   }
 
-  /**
-   * PUT request
-   */
+  
   async put<T = any>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
@@ -153,18 +138,14 @@ class ApiService {
     });
   }
 
-  /**
-   * DELETE request
-   */
+ 
   async delete<T = any>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'DELETE',
     });
   }
 
-  /**
-   * PATCH request
-   */
+  
   async patch<T = any>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
@@ -172,12 +153,10 @@ class ApiService {
     });
   }
 
-  /**
-   * Health check simple
-   */
+
 async healthCheck(): Promise<boolean> {
   try {
-    await this.get('/app-mobile/health'); // ✅ Ruta correcta
+    await this.get('/app-mobile/health');
     return true;
   } catch (error) {
     console.warn('Health check failed:', error);
@@ -185,15 +164,13 @@ async healthCheck(): Promise<boolean> {
   }
 }
 
-  /**
-   * Upload de archivos (para futuras funcionalidades)
-   */
+ 
   async uploadFile(endpoint: string, file: FormData): Promise<any> {
     const url = `${this.baseURL}${endpoint}`;
     
     const headers: Record<string, string> = {};
     
-    // Solo agregar Authorization, no Content-Type para FormData
+   
     if (this.authToken) {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
@@ -216,9 +193,7 @@ async healthCheck(): Promise<boolean> {
     }
   }
 
-  /**
-   * Obtener URL base (útil para imágenes, etc.)
-   */
+  
   getBaseURL(): string {
     return this.baseURL;
   }

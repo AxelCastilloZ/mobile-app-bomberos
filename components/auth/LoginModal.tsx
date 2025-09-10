@@ -27,7 +27,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       username: credentials.username.trim(),
       password: '***masked***',
       passwordLength: credentials.password?.length,
-      originalUsername: credentials.username // sin trim
+      originalUsername: credentials.username 
     });
 
     if (!credentials.username.trim() || !credentials.password) {
@@ -54,7 +54,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       
       console.log('✅ LoginModal: Login exitoso');
       
-      // Limpiar formulario
+      
       setCredentials({ username: '', password: '' });
       
       Alert.alert(

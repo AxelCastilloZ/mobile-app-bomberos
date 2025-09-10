@@ -30,7 +30,7 @@ interface EmergencyReport {
 }
 
 export default function App() {
-  console.log('App component loaded'); // Log básico para verificar
+  console.log('App component loaded'); 
   
   const { location, isLoading: locationLoading, error: locationError, refresh: refreshLocation, getLocationString, getLocationAccuracy } = useLocation();
   const { isLoggedIn, logout, isLoading: authLoading, hasAdminAccess, user } = useAuth();
@@ -38,7 +38,7 @@ export default function App() {
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // Verificar conectividad al iniciar
+
   useEffect(() => {
     checkConnectivity();
   }, []);
@@ -102,11 +102,11 @@ export default function App() {
       
       console.log('Enviando emergencia:', reportData);
       
-      // Intentar enviar al servidor
+      
       try {
         await apiService.post('/app-mobile/emergency/report', reportData);
         
-        // Feedback háptico de éxito
+      
         if (Platform.OS === 'ios') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
@@ -118,7 +118,7 @@ export default function App() {
           [{ text: 'OK' }]
         );
       } catch (apiError) {
-        // Si falla el API, mostrar números de emergencia
+        
         console.warn('Error enviando a API, mostrando números alternativos:', apiError);
         
         Alert.alert(

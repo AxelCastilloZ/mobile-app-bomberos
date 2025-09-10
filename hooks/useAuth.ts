@@ -1,4 +1,4 @@
-// hooks/useAuth.ts
+
 import { useState, useEffect } from 'react';
 import { authService, LoginCredentials, User } from '../services/auth.service';
 
@@ -8,7 +8,7 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Inicializar autenticación al cargar el hook
+  
   useEffect(() => {
     initializeAuth();
   }, []);
@@ -77,7 +77,7 @@ export const useAuth = () => {
       console.log('Logout completado');
     } catch (error) {
       console.error('Error en logout:', error);
-      // Forzar logout local aunque falle
+      
       setIsLoggedIn(false);
       setUser(null);
     } finally {
@@ -110,7 +110,7 @@ export const useAuth = () => {
       setUser(userData);
     } catch (error) {
       console.error('Error refrescando datos de usuario:', error);
-      // Si falla, podría ser que el token expiró
+      
       await logout();
     }
   };
@@ -119,7 +119,7 @@ export const useAuth = () => {
     setError(null);
   };
 
-  // Funciones de utilidad para roles - Todas definidas localmente
+
   const hasRole = (role: string): boolean => {
     return authService.hasRole(role);
   };
@@ -144,26 +144,26 @@ export const useAuth = () => {
     return authService.hasRole('VOLUNTARIO');
   };
 
-  // Función principal para verificar acceso administrativo
+  
   const hasAdminAccess = (): boolean => {
     return authService.hasAnyRole(['PERSONAL_BOMBERIL', 'ADMIN', 'SUPERUSER']);
   };
 
   return {
-    // Estado
+    
     isLoggedIn,
     isLoading,
     user,
     error,
     
-    // Acciones
+    
     login,
     logout,
     changePassword,
     refreshUserData,
     clearError,
     
-    // Utilidades de roles
+    
     hasRole,
     hasAnyRole,
     hasAdminAccess,

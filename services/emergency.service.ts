@@ -30,25 +30,23 @@ export interface EmergencyResponse {
 class EmergencyService {
   private readonly STORAGE_KEY = 'pending_emergency_reports';
 
-  /**
-   * Envía un reporte de emergencia al servidor
-   */
+ 
   async submitEmergencyReport(report: EmergencyReport): Promise<EmergencyResponse> {
     try {
-      // Intentar enviar al servidor primero
+      
       const response = await apiService.post<EmergencyResponse>('/emergency/report', {
         ...report,
         timestamp: report.timestamp.toISOString(),
       });
 
-      // Si el envío fue exitoso, eliminar de reportes pendientes locales
+      
       await this.removePendingReport(report.id || this.generateReportId(report));
 
       return response;
     } catch (error) {
       console.warn('Error enviando reporte al servidor, guardando localmente:', error);
       
-      // Guardar localmente si falla el envío
+      
       const reportWithId = {
         ...report,
         id: report.id || this.generateReportId(report),
@@ -57,7 +55,7 @@ class EmergencyService {
       
       await this.savePendingReport(reportWithId);
       
-      // Retornar respuesta simulada para continuar el flujo
+    
       return {
         reportId: reportWithId.id,
         status: 'saved_locally',
@@ -66,9 +64,7 @@ class EmergencyService {
     }
   }
 
-  /**
-   * Obtiene el historial de reportes del usuario
-   */
+ 
   async getReportHistory(): Promise<EmergencyReport[]> {
     try {
       return await apiService.get<EmergencyReport[]>('/emergency/reports/my-history');
@@ -78,9 +74,7 @@ class EmergencyService {
     }
   }
 
-  /**
-   * Obtiene reportes públicos para el mapa
-   */
+ 
   async getPublicReports(): Promise<EmergencyReport[]> {
     try {
       return await apiService.get<EmergencyReport[]>('/emergency/reports/public');
@@ -90,9 +84,7 @@ class EmergencyService {
     }
   }
 
-  /**
-   * Verifica el estado de un reporte específico
-   */
+
   async getReportStatus(reportId: string): Promise<EmergencyResponse | null> {
     try {
       return await apiService.get<EmergencyResponse>(`/emergency/reports/${reportId}/status`);
@@ -102,9 +94,7 @@ class EmergencyService {
     }
   }
 
-  /**
-   * Reintenta enviar reportes pendientes
-   */
+  
   async retryPendingReports(): Promise<{ success: number; failed: number }> {
     const pendingReports = await this.getPendingReports();
     let success = 0;
@@ -123,9 +113,7 @@ class EmergencyService {
     return { success, failed };
   }
 
-  /**
-   * Obtiene reportes pendientes de envío
-   */
+ 
   async getPendingReports(): Promise<EmergencyReport[]> {
     try {
       const stored = await AsyncStorage.getItem(this.STORAGE_KEY);
@@ -133,7 +121,7 @@ class EmergencyService {
 
       const reports = JSON.parse(stored) as EmergencyReport[];
       
-      // Convertir timestamps de string a Date
+     
       return reports.map(report => ({
         ...report,
         timestamp: new Date(report.timestamp),
@@ -144,9 +132,7 @@ class EmergencyService {
     }
   }
 
-  /**
-   * Guarda un reporte pendiente localmente
-   */
+  
   private async savePendingReport(report: EmergencyReport): Promise<void> {
     try {
       const pending = await this.getPendingReports();
@@ -158,9 +144,7 @@ class EmergencyService {
     }
   }
 
-  /**
-   * Elimina un reporte pendiente
-   */
+ 
   private async removePendingReport(reportId: string): Promise<void> {
     try {
       const pending = await this.getPendingReports();
@@ -172,14 +156,13 @@ class EmergencyService {
     }
   }
 
-  /**
-   * Obtiene reportes guardados localmente
-   */
+ 
+   
   private async getLocalReports(): Promise<EmergencyReport[]> {
     try {
       const pending = await this.getPendingReports();
       
-      // Retornar solo los últimos 10 reportes para no sobrecargar
+     
       return pending
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .slice(0, 10);
@@ -189,18 +172,14 @@ class EmergencyService {
     }
   }
 
-  /**
-   * Genera un ID único para el reporte
-   */
+  
   private generateReportId(report: EmergencyReport): string {
     const timestamp = report.timestamp.getTime();
     const random = Math.random().toString(36).substring(2, 8);
     return `ER-${timestamp}-${random}`;
   }
 
-  /**
-   * Limpia reportes antiguos (más de 30 días)
-   */
+  
   async cleanOldReports(): Promise<void> {
     try {
       const pending = await this.getPendingReports();
@@ -217,9 +196,7 @@ class EmergencyService {
     }
   }
 
-  /**
-   * Obtiene estadísticas de reportes
-   */
+
   async getReportStats(): Promise<{
     total: number;
     pending: number;

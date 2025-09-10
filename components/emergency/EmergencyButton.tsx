@@ -6,12 +6,12 @@ import * as Haptics from 'expo-haptics';
 
 interface EmergencyButtonProps {
   onPress: () => void;
-  holdDuration?: number; // Duración en milisegundos para mantener presionado
+  holdDuration?: number;
 }
 
 export const EmergencyButton: React.FC<EmergencyButtonProps> = ({ 
   onPress, 
-  holdDuration = 3000 // 3 segundos por defecto
+  holdDuration = 3000 
 }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -24,7 +24,7 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Pulse animation - solo cuando no está siendo presionado
+    
     const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -68,7 +68,7 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
     setIsHolding(true);
     setProgress(0);
     
-    // Haptic feedback al iniciar
+    
     try {
       if (Haptics.impactAsync) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -77,21 +77,21 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
       console.log('Haptics no disponible');
     }
 
-    // Animar la escala del botón
+    
     Animated.timing(scaleAnim, {
       toValue: 0.95,
       duration: 150,
       useNativeDriver: true,
     }).start();
 
-    // Animar el progreso
+    
     Animated.timing(progressAnim, {
       toValue: 1,
       duration: holdDuration,
-      useNativeDriver: false, // Necesario para animaciones de layout
+      useNativeDriver: false, 
     }).start();
 
-    // Timer para el progreso visual
+   
     const startTime = Date.now();
     progressTimerRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -99,7 +99,7 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
       setProgress(newProgress);
     }, 50);
 
-    // Timer principal para completar la acción
+    
     holdTimerRef.current = setTimeout(() => {
       completeHold();
     }, holdDuration);
@@ -110,7 +110,7 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
     setIsHolding(false);
     setProgress(0);
 
-    // Limpiar timers
+   
     if (holdTimerRef.current) {
       clearTimeout(holdTimerRef.current);
       holdTimerRef.current = null;
@@ -120,7 +120,7 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
       progressTimerRef.current = null;
     }
 
-    // Resetear animaciones
+    
     Animated.parallel([
       Animated.timing(scaleAnim, {
         toValue: 1,
@@ -138,7 +138,7 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
   const completeHold = () => {
     console.log('Completando hold...');
     
-    // Haptic feedback de éxito
+    
     try {
       if (Haptics.notificationAsync) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -147,17 +147,17 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
       console.log('Haptics no disponible');
     }
 
-    // Resetear estado
+    
     setIsHolding(false);
     setProgress(0);
 
-    // Limpiar timers
+    
     if (progressTimerRef.current) {
       clearInterval(progressTimerRef.current);
       progressTimerRef.current = null;
     }
 
-    // Resetear animaciones
+    
     Animated.parallel([
       Animated.timing(scaleAnim, {
         toValue: 1,
@@ -171,7 +171,7 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
       })
     ]).start();
 
-    // Ejecutar la acción
+    
     onPress();
   };
 
@@ -180,7 +180,7 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
     outputRange: ['0deg', '360deg'],
   });
 
-  // Calcular el ángulo del progreso circular
+  
   const progressAngle = progressAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
@@ -188,10 +188,10 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Outer ring - static */}
+      {}
       <View style={styles.outerRing} />
       
-      {/* Middle ring with subtle rotation */}
+      {}
       <Animated.View 
         style={[
           styles.middleRing,
@@ -201,7 +201,7 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
         ]}
       />
       
-      {/* Progress ring - only visible when holding */}
+      {}
       {isHolding && (
         <View style={styles.progressContainer}>
           <View style={styles.progressBackground} />
@@ -221,7 +221,7 @@ export const EmergencyButton: React.FC<EmergencyButtonProps> = ({
         </View>
       )}
       
-      {/* Main button with pulse */}
+      {}
       <Animated.View
         style={[
           styles.buttonContainer,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4.65,
   },
   buttonHolding: {
-    backgroundColor: '#B71C1C', // Color más oscuro cuando se mantiene presionado
+    backgroundColor: '#B71C1C', 
   },
   buttonText: {
     color: '#FFFFFF',
