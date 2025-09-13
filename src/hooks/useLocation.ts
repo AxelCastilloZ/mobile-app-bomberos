@@ -47,7 +47,7 @@ export const useLocation = () => {
       setIsLoading(true);
       setError(null);
 
-      
+      // Verificar si los servicios están habilitados
       const enabled = await Location.hasServicesEnabledAsync();
       if (!enabled) {
         setError(createError('SERVICES_DISABLED', 
@@ -57,7 +57,7 @@ export const useLocation = () => {
         return false;
       }
 
-    
+      // Solicitar permisos
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setError(createError('PERMISSION_DENIED',
@@ -67,7 +67,7 @@ export const useLocation = () => {
         return false;
       }
 
-    
+      // Obtener ubicación inicial
       await getCurrentLocation();
       return true;
 
@@ -121,8 +121,8 @@ export const useLocation = () => {
       watchSubscription.current = await Location.watchPositionAsync(
         {
           accuracy: options?.accuracy || Location.Accuracy.High,
-          timeInterval: options?.timeInterval || 10000, 
-          distanceInterval: options?.distanceInterval || 10, 
+          timeInterval: options?.timeInterval || 10000, // 10 segundos
+          distanceInterval: options?.distanceInterval || 10, // 10 metros
         },
         (newLocation) => {
           setLocation(newLocation);
@@ -221,7 +221,7 @@ export const useLocation = () => {
   };
 
   const isLocationStale = (maxAgeMs: number = 300000): boolean => {
-   
+    // 300000ms = 5 minutos por defecto
     if (!lastUpdate) return true;
     return (Date.now() - lastUpdate) > maxAgeMs;
   };
@@ -248,30 +248,30 @@ export const useLocation = () => {
   };
 
   return {
-    // Estado básico
+    
     location,
     isLoading,
     error,
     isWatching,
     lastUpdate,
 
-    // Acciones principales
+    
     getCurrentLocation,
     refreshLocation,
     startWatching,
     stopWatching,
     clearError,
 
-    // Funciones de utilidad para mostrar
+    
     getLocationString,
     getLocationAccuracy,
     getLocationAge,
 
-    // Funciones para emergencias
+    
     getLocationForEmergency,
     getAddressFromCoords,
 
-    // Funciones de validación
+  
     isLocationStale,
     hasGoodAccuracy,
 

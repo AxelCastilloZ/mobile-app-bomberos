@@ -7,5 +7,12 @@ export const theme = {
     primary: '#D32F2F',
     secondary: '#FFA726',
     error: '#FF1744',
+    surface: '#FFFFFF',
+    background: '#F5F5F5',
+    onPrimary: '#FFFFFF',
+    onSecondary: '#000000',
+    onSurface: '#212121',
+    onBackground: '#212121',
   },
+  roundness: 8,
 };

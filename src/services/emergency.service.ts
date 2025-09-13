@@ -1,5 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { apiService } from './api.service';
+import { storageService } from './storage.service';
 
 export interface EmergencyReport {
   id?: string;
@@ -30,23 +31,50 @@ export interface EmergencyResponse {
 class EmergencyService {
   private readonly STORAGE_KEY = 'pending_emergency_reports';
 
- 
   async submitEmergencyReport(report: EmergencyReport): Promise<EmergencyResponse> {
     try {
+      console.log('EmergencyService: Enviando reporte...');
       
-      const response = await apiService.post<EmergencyResponse>('/emergency/report', {
-        ...report,
-        timestamp: report.timestamp.toISOString(),
-      });
-
+      // Verificar si el servidor está disponible
+      const serverAvailable = await apiService.isServerAvailable();
       
-      await this.removePendingReport(report.id || this.generateReportId(report));
+      if (serverAvailable) {
+        // Enviar al servidor
+        const response = await apiService.post<EmergencyResponse>('/app-mobile/emergency/report', {
+          ...report,
+          timestamp: report.timestamp.toISOString(),
+        });
 
-      return response;
+        console.log('EmergencyService: Reporte enviado exitosamente');
+        
+        // Remover de reportes pendientes si existía
+        if (report.id) {
+          await this.removePendingReport(report.id);
+        }
+
+        return response;
+      } else {
+        // Guardar localmente
+        console.log('EmergencyService: Servidor no disponible, guardando localmente');
+        
+        const reportWithId = {
+          ...report,
+          id: report.id || this.generateReportId(report),
+          status: 'pending' as const,
+        };
+        
+        await this.savePendingReport(reportWithId);
+        
+        return {
+          reportId: reportWithId.id,
+          status: 'saved_locally',
+          message: 'Reporte guardado localmente. Se enviará cuando haya conexión.',
+        };
+      }
     } catch (error) {
-      console.warn('Error enviando reporte al servidor, guardando localmente:', error);
+      console.error('EmergencyService: Error enviando reporte:', error);
       
-      
+      // Si falla el envío, guardar localmente
       const reportWithId = {
         ...report,
         id: report.id || this.generateReportId(report),
@@ -55,46 +83,56 @@ class EmergencyService {
       
       await this.savePendingReport(reportWithId);
       
-    
-      return {
-        reportId: reportWithId.id,
-        status: 'saved_locally',
-        message: 'Reporte guardado localmente. Se enviará cuando haya conexión.',
-      };
+      throw new Error('No se pudo enviar el reporte. Se guardó localmente para envío posterior.');
     }
   }
 
- 
   async getReportHistory(): Promise<EmergencyReport[]> {
     try {
-      return await apiService.get<EmergencyReport[]>('/emergency/reports/my-history');
+      const serverAvailable = await apiService.isServerAvailable();
+      
+      if (serverAvailable) {
+        return await apiService.get<EmergencyReport[]>('/app-mobile/emergency/reports/my-history');
+      } else {
+        // Devolver reportes locales
+        return await this.getLocalReports();
+      }
     } catch (error) {
-      console.warn('Error obteniendo historial del servidor, usando cache local:', error);
+      console.warn('EmergencyService: Error obteniendo historial, usando cache local:', error);
       return await this.getLocalReports();
     }
   }
 
- 
   async getPublicReports(): Promise<EmergencyReport[]> {
     try {
-      return await apiService.get<EmergencyReport[]>('/emergency/reports/public');
+      const serverAvailable = await apiService.isServerAvailable();
+      
+      if (!serverAvailable) {
+        return [];
+      }
+
+      return await apiService.get<EmergencyReport[]>('/app-mobile/emergency/reports/public');
     } catch (error) {
-      console.warn('Error obteniendo reportes públicos:', error);
+      console.warn('EmergencyService: Error obteniendo reportes públicos:', error);
       return [];
     }
   }
 
-
   async getReportStatus(reportId: string): Promise<EmergencyResponse | null> {
     try {
-      return await apiService.get<EmergencyResponse>(`/emergency/reports/${reportId}/status`);
+      const serverAvailable = await apiService.isServerAvailable();
+      
+      if (!serverAvailable) {
+        return null;
+      }
+
+      return await apiService.get<EmergencyResponse>(`/app-mobile/emergency/reports/${reportId}/status`);
     } catch (error) {
-      console.warn('Error obteniendo estado del reporte:', error);
+      console.warn('EmergencyService: Error obteniendo estado del reporte:', error);
       return null;
     }
   }
 
-  
   async retryPendingReports(): Promise<{ success: number; failed: number }> {
     const pendingReports = await this.getPendingReports();
     let success = 0;
@@ -106,80 +144,74 @@ class EmergencyService {
         success++;
       } catch (error) {
         failed++;
-        console.warn(`Error reenviando reporte ${report.id}:`, error);
+        console.warn(`EmergencyService: Error reenviando reporte ${report.id}:`, error);
       }
     }
 
+    console.log(`EmergencyService: Retry completado - ${success} exitosos, ${failed} fallidos`);
     return { success, failed };
   }
 
- 
   async getPendingReports(): Promise<EmergencyReport[]> {
     try {
-      const stored = await AsyncStorage.getItem(this.STORAGE_KEY);
-      if (!stored) return [];
+      const reports = await storageService.get<EmergencyReport[]>(this.STORAGE_KEY);
+      if (!reports) return [];
 
-      const reports = JSON.parse(stored) as EmergencyReport[];
-      
-     
+      // Convertir timestamps a Date objects
       return reports.map(report => ({
         ...report,
         timestamp: new Date(report.timestamp),
       }));
     } catch (error) {
-      console.error('Error obteniendo reportes pendientes:', error);
+      console.error('EmergencyService: Error obteniendo reportes pendientes:', error);
       return [];
     }
   }
 
-  
   private async savePendingReport(report: EmergencyReport): Promise<void> {
     try {
       const pending = await this.getPendingReports();
       const updated = [...pending, report];
       
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(updated));
+      await storageService.set(this.STORAGE_KEY, updated);
+      console.log('EmergencyService: Reporte guardado localmente:', report.id);
     } catch (error) {
-      console.error('Error guardando reporte pendiente:', error);
+      console.error('EmergencyService: Error guardando reporte pendiente:', error);
     }
   }
 
- 
   private async removePendingReport(reportId: string): Promise<void> {
     try {
       const pending = await this.getPendingReports();
       const filtered = pending.filter(report => report.id !== reportId);
       
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(filtered));
+      await storageService.set(this.STORAGE_KEY, filtered);
+      console.log('EmergencyService: Reporte pendiente eliminado:', reportId);
     } catch (error) {
-      console.error('Error eliminando reporte pendiente:', error);
+      console.error('EmergencyService: Error eliminando reporte pendiente:', error);
     }
   }
 
- 
-   
   private async getLocalReports(): Promise<EmergencyReport[]> {
     try {
       const pending = await this.getPendingReports();
       
-     
+      // Devolver los últimos 10 reportes ordenados por fecha
       return pending
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .slice(0, 10);
     } catch (error) {
-      console.error('Error obteniendo reportes locales:', error);
+      console.error('EmergencyService: Error obteniendo reportes locales:', error);
       return [];
     }
   }
 
-  
   private generateReportId(report: EmergencyReport): string {
     const timestamp = report.timestamp.getTime();
     const random = Math.random().toString(36).substring(2, 8);
     return `ER-${timestamp}-${random}`;
   }
 
-  
   async cleanOldReports(): Promise<void> {
     try {
       const pending = await this.getPendingReports();
@@ -190,12 +222,12 @@ class EmergencyService {
         report => new Date(report.timestamp) > thirtyDaysAgo
       );
 
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(filtered));
+      await storageService.set(this.STORAGE_KEY, filtered);
+      console.log('EmergencyService: Reportes antiguos limpiados');
     } catch (error) {
-      console.error('Error limpiando reportes antiguos:', error);
+      console.error('EmergencyService: Error limpiando reportes antiguos:', error);
     }
   }
-
 
   async getReportStats(): Promise<{
     total: number;
@@ -227,7 +259,7 @@ class EmergencyService {
         byType,
       };
     } catch (error) {
-      console.error('Error obteniendo estadísticas:', error);
+      console.error('EmergencyService: Error obteniendo estadísticas:', error);
       return {
         total: 0,
         pending: 0,

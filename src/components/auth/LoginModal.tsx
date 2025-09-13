@@ -23,12 +23,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const handleLogin = async () => {
     console.log('🔵 LoginModal: handleLogin iniciado');
     console.log('📝 LoginModal: Estado actual de credentials:', credentials);
-    console.log('📝 LoginModal: Credenciales que VOY A ENVIAR:', {
-      username: credentials.username.trim(),
-      password: '***masked***',
-      passwordLength: credentials.password?.length,
-      originalUsername: credentials.username 
-    });
 
     if (!credentials.username.trim() || !credentials.password) {
       console.log('❌ LoginModal: Validación fallida - campos vacíos');
@@ -54,7 +48,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       
       console.log('✅ LoginModal: Login exitoso');
       
-      
+      // Limpiar credenciales
       setCredentials({ username: '', password: '' });
       
       Alert.alert(
