@@ -1,18 +1,15 @@
-
+// src/screens/LoginScreen.tsx - Actualizado para Expo Router
 import React from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
 import { LoginModal } from '../components/auth/LoginModal';
-import type { RootStackNavigationProp } from '../types/navigation.types';
 
 export const LoginScreen: React.FC = () => {
-  const navigation = useNavigation<RootStackNavigationProp>();
-
   const handleDismiss = () => {
-    navigation.goBack();
+    router.back();
   };
 
   const handleLoginSuccess = () => {
-    navigation.goBack();
+    router.back();
   };
 
   return (

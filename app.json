@@ -7,14 +7,27 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "bomberos-nosara",
+
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+
+    "plugins": [
+      "expo-secure-store",
+      "expo-font",
+      "expo-router"
+    ],
+
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIViewControllerBasedStatusBarAppearance": true
+      }
     },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -22,11 +35,15 @@
       },
       "edgeToEdgeEnabled": true
     },
+
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#D32F2F",
+      "translucent": false
+    },
+
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "plugins": [
-      "expo-secure-store"
-    ]
+    }
   }
 }

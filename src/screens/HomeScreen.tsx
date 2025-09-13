@@ -1,10 +1,9 @@
-
+// src/screens/HomeScreen.tsx - Actualizado para Expo Router
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, Platform, Linking } from 'react-native';
 import { Text, ActivityIndicator, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import type { StackNavigationProp } from '@react-navigation/stack';
+import { router } from 'expo-router';
 import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 
@@ -15,17 +14,7 @@ import { apiService } from '../services/api.service';
 import { emergencyService } from '../services/emergency.service';
 import { PHONE_NUMBERS, EMERGENCY_TYPES } from '../utils/constants';
 
-
-type RootStackParamList = {
-  Main: undefined;
-  Emergency: undefined;
-  Login: undefined;
-};
-
-type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
-
 export const HomeScreen: React.FC = () => {
-  const navigation = useNavigation<HomeScreenNavigationProp>();
   const { 
     location, 
     isLoading: locationLoading, 
@@ -105,8 +94,8 @@ export const HomeScreen: React.FC = () => {
       if (Platform.OS === 'ios') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
-      // Navegar a la pantalla de emergencia
-      navigation.navigate('Emergency');
+      // Navegar a la pantalla de emergencia usando Expo Router
+      router.push('/emergency');
     } catch (error) {
       console.error('Error navegando a emergencia:', error);
       Alert.alert('Error', 'No se pudo abrir la pantalla de emergencia');

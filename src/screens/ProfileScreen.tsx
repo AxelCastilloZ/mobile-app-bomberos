@@ -1,8 +1,9 @@
-
+// src/screens/ProfileScreen.tsx - Actualizado para Expo Router
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { Text, Card, Button, List, Switch, Divider, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { useAuth } from '../hooks/useAuth';
 import { useStorage } from '../hooks/useStorage';
@@ -25,7 +26,7 @@ interface UserPreferences {
 
 export const ProfileScreen: React.FC = () => {
   const { user, isLoggedIn, logout, changePassword } = useAuth();
-  const { getUserPreferences, saveUserPreferences } = useStorage();
+  const { getUserPreferences, saveUserPreferences, clearAll } = useStorage();
   
   const [stats, setStats] = useState<UserStats | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>({
@@ -39,45 +40,49 @@ export const ProfileScreen: React.FC = () => {
 
   useEffect(() => {
     loadUserData();
-  }, []);
+  }, [isLoggedIn]);
 
-  // En la función loadUserData, reemplaza esta parte:
-const loadUserData = async () => {
-  try {
-    setLoading(true);
-    
-    // Cargar estadísticas de reportes
-    const reportStats = await emergencyService.getReportStats();
-    
-    // Convertir al formato esperado, proporcionando valores por defecto
-    const userStats: UserStats = {
-      totalReports: reportStats?.total || 0,
-      pendingReports: reportStats?.pending || 0,
-      thisMonthReports: reportStats?.thisMonth || 0,
-      reportsByType: reportStats?.byType || {},
-    };
-    
-    setStats(userStats);
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      
+      const reportStats = await emergencyService.getReportStats();
+      
+      const userStats: UserStats = {
+        totalReports: reportStats?.total || 0,
+        pendingReports: reportStats?.pending || 0,
+        thisMonthReports: reportStats?.thisMonth || 0,
+        reportsByType: reportStats?.byType || {},
+      };
+      
+      setStats(userStats);
 
-   
-  } catch (error) {
-    console.error('Error cargando datos del usuario:', error);
- 
-    setStats({
-      totalReports: 0,
-      pendingReports: 0,
-      thisMonthReports: 0,
-      reportsByType: {},
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      const savedPreferences = await getUserPreferences();
+      if (savedPreferences) {
+        setPreferences(savedPreferences);
+      }
+
+    } catch (error) {
+      console.error('Error cargando datos del usuario:', error);
+      setStats({
+        totalReports: 0,
+        pendingReports: 0,
+        thisMonthReports: 0,
+        reportsByType: {},
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const updatePreference = async (key: keyof UserPreferences, value: boolean) => {
     const newPreferences = { ...preferences, [key]: value };
     setPreferences(newPreferences);
     await saveUserPreferences(newPreferences);
+  };
+
+  const handleLogin = () => {
+    router.push('/login');
   };
 
   const handleLogout = () => {
@@ -103,51 +108,61 @@ const loadUserData = async () => {
   };
 
   const handleChangePassword = () => {
-    Alert.prompt(
-      'Cambiar Contraseña',
-      'Ingresa tu contraseña actual:',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Continuar',
-          onPress: (currentPassword) => {
-            if (currentPassword) {
-              promptNewPassword(currentPassword);
-            }
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'Cambiar Contraseña',
+        'Ingresa tu contraseña actual:',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Continuar',
+            onPress: (currentPassword?: string) => {
+              if (currentPassword) {
+                promptNewPassword(currentPassword);
+              }
+            },
           },
-        },
-      ],
-      'secure-text'
-    );
+        ],
+        'secure-text'
+      );
+    } else {
+      Alert.alert(
+        'Cambiar Contraseña',
+        'Para cambiar tu contraseña, contacta al administrador del sistema.',
+        [{ text: 'Entendido' }]
+      );
+    }
   };
 
   const promptNewPassword = (currentPassword: string) => {
-    Alert.prompt(
-      'Nueva Contraseña',
-      'Ingresa tu nueva contraseña:',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Cambiar',
-          onPress: async (newPassword) => {
-            if (newPassword && newPassword.length >= 6) {
-              try {
-                setChangingPassword(true);
-                await changePassword(currentPassword, newPassword);
-                Alert.alert('Éxito', 'Contraseña cambiada exitosamente.');
-              } catch (error) {
-                Alert.alert('Error', 'No se pudo cambiar la contraseña. Verifica tu contraseña actual.');
-              } finally {
-                setChangingPassword(false);
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'Nueva Contraseña',
+        'Ingresa tu nueva contraseña:',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Cambiar',
+            onPress: async (newPassword?: string) => {
+              if (newPassword && newPassword.length >= 6) {
+                try {
+                  setChangingPassword(true);
+                  await changePassword(currentPassword, newPassword);
+                  Alert.alert('Éxito', 'Contraseña cambiada exitosamente.');
+                } catch (error) {
+                  Alert.alert('Error', 'No se pudo cambiar la contraseña. Verifica tu contraseña actual.');
+                } finally {
+                  setChangingPassword(false);
+                }
+              } else {
+                Alert.alert('Error', 'La nueva contraseña debe tener al menos 6 caracteres.');
               }
-            } else {
-              Alert.alert('Error', 'La nueva contraseña debe tener al menos 6 caracteres.');
-            }
+            },
           },
-        },
-      ],
-      'secure-text'
-    );
+        ],
+        'secure-text'
+      );
+    }
   };
 
   const showServerInfo = async () => {
@@ -173,9 +188,9 @@ const loadUserData = async () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { clearAll } = useStorage();
               await clearAll();
               Alert.alert('Datos Limpiados', 'Todos los datos locales han sido eliminados.');
+              loadUserData();
             } catch (error) {
               Alert.alert('Error', 'No se pudieron limpiar todos los datos.');
             }
@@ -219,6 +234,18 @@ const loadUserData = async () => {
               )}
             </View>
           </View>
+          
+          {/* Botón de login si no está autenticado */}
+          {!isLoggedIn && (
+            <Button
+              mode="contained"
+              icon="login"
+              onPress={handleLogin}
+              style={styles.loginButton}
+            >
+              Iniciar Sesión
+            </Button>
+          )}
         </Card.Content>
       </Card>
 
@@ -333,16 +360,18 @@ const loadUserData = async () => {
               Cuenta
             </Text>
 
-            <Button
-              mode="outlined"
-              icon="lock-reset"
-              onPress={handleChangePassword}
-              style={styles.actionButton}
-              loading={changingPassword}
-              disabled={changingPassword}
-            >
-              Cambiar Contraseña
-            </Button>
+            {Platform.OS === 'ios' && (
+              <Button
+                mode="outlined"
+                icon="lock-reset"
+                onPress={handleChangePassword}
+                style={styles.actionButton}
+                loading={changingPassword}
+                disabled={changingPassword}
+              >
+                Cambiar Contraseña
+              </Button>
+            )}
 
             <Button
               mode="outlined"
@@ -437,6 +466,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    marginBottom: 16,
   },
   profileInfo: {
     flex: 1,
@@ -453,6 +483,9 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  loginButton: {
+    backgroundColor: '#D32F2F',
   },
   statsCard: {
     marginBottom: 16,

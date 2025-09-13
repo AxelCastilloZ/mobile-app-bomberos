@@ -1,8 +1,8 @@
-
+// src/screens/EmergencyScreen.tsx - Actualizado para Expo Router
 import React, { useState } from 'react';
 import { View, StyleSheet, Alert, Platform, Linking } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
 import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 
@@ -12,7 +12,6 @@ import { emergencyService } from '../services/emergency.service';
 import { PHONE_NUMBERS, EMERGENCY_TYPES } from '../utils/constants';
 
 export const EmergencyScreen: React.FC = () => {
-  const navigation = useNavigation();
   const { location, getLocationString, getLocationAccuracy } = useLocation();
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
@@ -23,7 +22,7 @@ export const EmergencyScreen: React.FC = () => {
   });
 
   const handleCancel = () => {
-    navigation.goBack();
+    router.back();
   };
 
   const handleEmergencyReport = (type: any) => {
@@ -70,12 +69,31 @@ export const EmergencyScreen: React.FC = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       
-      navigation.goBack();
+      router.back();
       
+      let message = 'Los bomberos han sido notificados.';
+      if (response.status === 'saved_locally') {
+        message = 'Tu reporte se guardó localmente y se enviará cuando haya conexión.';
+      } else {
+        if (response.estimatedArrival) {
+          message += `\n⏰ Tiempo estimado: ${response.estimatedArrival}`;
+        }
+        if (response.assignedUnit) {
+          message += `\n🚒 Unidad asignada: ${response.assignedUnit}`;
+        }
+      }
+      message += `\n📋 ID del reporte: ${response.reportId}`;
+
       Alert.alert(
         'Emergencia Reportada', 
-        'Los bomberos han sido notificados.',
-        [{ text: 'OK' }]
+        message,
+        [
+          { text: 'OK' },
+          { 
+            text: 'Llamar Directamente', 
+            onPress: () => Linking.openURL(`tel:${PHONE_NUMBERS.EMERGENCY}`) 
+          }
+        ]
       );
         
     } catch (error) {
@@ -83,7 +101,13 @@ export const EmergencyScreen: React.FC = () => {
       Alert.alert(
         'Error',
         'Hubo un problema enviando el reporte. Por favor llama directamente al 911.',
-        [{ text: 'Entendido' }]
+        [
+          { text: 'Entendido' },
+          { 
+            text: 'Llamar Ahora', 
+            onPress: () => Linking.openURL(`tel:${PHONE_NUMBERS.EMERGENCY}`) 
+          }
+        ]
       );
     } finally {
       setIsSubmittingReport(false);
@@ -102,6 +126,7 @@ export const EmergencyScreen: React.FC = () => {
           <View style={styles.overlayContent}>
             <ActivityIndicator size="large" color="#FFFFFF" />
             <Text style={styles.overlayText}>Enviando reporte de emergencia...</Text>
+            <Text style={styles.overlaySubtext}>No cierres la aplicación</Text>
           </View>
         </View>
       )}
@@ -134,5 +159,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginTop: 12,
     fontSize: 16,
+  },
+  overlaySubtext: {
+    color: '#FFCDD2',
+    marginTop: 4,
+    fontSize: 12,
   },
 });

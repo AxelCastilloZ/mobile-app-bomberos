@@ -28,20 +28,20 @@ yarn-debug.*
 yarn-error.*
 *.log
 
-# macOS / Windows
+
 .DS_Store
 Thumbs.db
 *.pem
 
-# Editor / tooling
+
 .vscode/
 .idea/
 .history/
 
-# Local env files (ignora todos los .env)
+
 .env
 .env.*
 !.env.example
 
-# TypeScript
+
 *.tsbuildinfo

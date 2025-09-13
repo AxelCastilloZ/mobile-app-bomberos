@@ -1,4 +1,4 @@
-
+// src/screens/AdminScreen.tsx - Actualizado para Expo Router
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Text, Card, Button, Chip, ActivityIndicator, List, Divider } from 'react-native-paper';
@@ -7,7 +7,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { emergencyService } from '../services/emergency.service';
 import { EMERGENCY_TYPES } from '../utils/constants';
-
 
 interface EmergencyReport {
   id: string;
@@ -52,9 +51,7 @@ export const AdminScreen: React.FC = () => {
     try {
       setLoading(true);
       
-      
       const allReports = await emergencyService.getPublicReports();
-      
       
       const processedReports: EmergencyReport[] = allReports.map(report => ({
         id: report.id || `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -68,7 +65,6 @@ export const AdminScreen: React.FC = () => {
       }));
       
       setReports(processedReports);
-      
       
       const adminStats = calculateStats(processedReports);
       setStats(adminStats);
@@ -102,13 +98,10 @@ export const AdminScreen: React.FC = () => {
     let resolvedToday = 0;
 
     reports.forEach(report => {
-      
       reportsByType[report.type] = (reportsByType[report.type] || 0) + 1;
-      
       
       const status = report.status || 'pending';
       reportsByStatus[status] = (reportsByStatus[status] || 0) + 1;
-      
       
       if (status === 'pending') pendingReports++;
       if (status === 'in_progress' || status === 'acknowledged') activeReports++;
@@ -163,7 +156,6 @@ export const AdminScreen: React.FC = () => {
 
   const handleReportPress = (report: EmergencyReport) => {
     setSelectedReport(report);
-    // TODO: Mostrar modal con detalles del reporte o navegar a pantalla de detalle
     console.log('Reporte seleccionado:', report);
   };
 
@@ -171,10 +163,6 @@ export const AdminScreen: React.FC = () => {
     try {
       console.log(`Actualizando reporte ${reportId} a estado ${newStatus}`);
       
-      // TODO: Implementar llamada al API para actualizar estado
-      // await apiService.updateReportStatus(reportId, newStatus);
-      
-      // Actualizar localmente por ahora
       setReports(prevReports => 
         prevReports.map(report => 
           report.id === reportId 
@@ -183,7 +171,6 @@ export const AdminScreen: React.FC = () => {
         )
       );
       
-      // Recalcular estadísticas con los datos actualizados
       const updatedReports = reports.map(report => 
         report.id === reportId 
           ? { ...report, status: newStatus }
