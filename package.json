@@ -1,21 +1,59 @@
 {
   "name": "nosara-emergency-app",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "lint:check": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json}\"",
+    "code:fix": "npm run lint:fix && npm run format",
+    "code:check": "npm run lint:check && npm run format:check",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "expo": "~52.0.47",
-    "expo-status-bar": "~2.0.1",
-    "react": "18.3.1",
-    "react-native": "0.76.9"
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~54.0.0",
+    "expo-asset": "~12.0.9",
+    "expo-av": "^16.0.7",
+    "expo-constants": "~18.0.9",
+    "expo-device": "^8.0.9",
+    "expo-haptics": "^15.0.7",
+    "expo-location": "~19.0.7",
+    "expo-notifications": "^0.32.12",
+    "expo-router": "~6.0.8",
+    "expo-splash-screen": "~31.0.10",
+    "expo-status-bar": "~3.0.8",
+    "expo-task-manager": "^14.0.7",
+    "react": "19.1.0",
+    "react-native": "0.81.4",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-uuid": "^2.0.2",
+    "socket.io-client": "^4.7.5",
+    "zustand": "^4.5.4"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0"
+    "@babel/core": "^7.20.0",
+    "@react-native-community/eslint-config": "^3.2.0",
+    "@types/react": "~19.1.10",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "babel-preset-expo": "^54.0.3",
+    "dotenv": "^17.2.2",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-react": "^7.35.2",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-native": "^4.1.0",
+    "prettier": "^3.6.2",
+    "typescript": "~5.9.2"
   },
   "private": true
 }
