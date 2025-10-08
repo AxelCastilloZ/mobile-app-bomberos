@@ -1,5 +1,7 @@
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocation } from '../../hooks/useLocation';
+import { useMapNavigation } from '../../hooks/useMapNavigation';
+// import LocationMap from '../maps/LocationMap'; // Comentado hasta hacer dev build
 
 export default function TestLocation() {
   const {
@@ -19,6 +21,8 @@ export default function TestLocation() {
     refresh,
     formatDistance,
   } = useLocation();
+
+  const { showNavigationOptions } = useMapNavigation();
 
   // Coordenadas de ejemplo para calcular distancia (centro de Nosara)
   const NOSARA_CENTER = {
@@ -144,6 +148,38 @@ export default function TestLocation() {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Navegación Externa */}
+      {currentLocation && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🧭 Navegación</Text>
+          <TouchableOpacity
+            style={[styles.button, styles.navigationButton]}
+            onPress={() => showNavigationOptions(
+              currentLocation.coordinates,
+              currentLocation.address?.formatted || 'Mi ubicación'
+            )}
+          >
+            <Text style={styles.buttonText}>📍 Abrir en Google Maps / Waze</Text>
+          </TouchableOpacity>
+          <Text style={styles.infoText}>
+            Abrirá las apps de navegación instaladas en tu dispositivo
+          </Text>
+        </View>
+      )}
+
+      {/* Mapa - Comentado hasta hacer dev build */}
+      {/* {currentLocation && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🗺️ Mapa</Text>
+          <LocationMap
+            coordinates={currentLocation.coordinates}
+            title="Mi ubicación actual"
+            description={currentLocation.address?.formatted}
+            height={250}
+          />
+        </View>
+      )} */}
 
       {/* Datos de Ubicación */}
       {currentLocation && (
@@ -311,6 +347,15 @@ const styles = StyleSheet.create({
   },
   warningButton: {
     backgroundColor: '#f59e0b',
+  },
+  navigationButton: {
+    backgroundColor: '#2563eb',
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#9ca3af',
+    textAlign: 'center',
+    marginTop: 8,
   },
   buttonText: {
     color: 'white',
