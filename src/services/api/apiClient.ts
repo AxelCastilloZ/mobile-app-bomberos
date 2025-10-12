@@ -1,7 +1,7 @@
+import { useAuthStore } from '@/store/authStore';
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
-import { useAuthStore } from '../../store/authStore';
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://192.168.100.5:3000';
 const REQUEST_TIMEOUT = 10000;
 
 export interface ApiResponse<T = any> {
@@ -87,7 +87,7 @@ export class ApiClient {
       // Error de red
       if (!axiosError.response) {
         return {
-          error: 'Error de red. Verifica tu conexión.',
+          error: 'Error de red. Verifica tu conexión y que el servidor esté corriendo.',
           statusCode: 0,
         };
       }

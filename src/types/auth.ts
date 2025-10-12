@@ -14,22 +14,26 @@ export interface AuthState {
 }
 
 export interface LoginCredentials {
-  email: string;
+  username: string; // Cambiado de email a username
   password: string;
 }
 
 export interface RegisterData {
-  email: string;
-  password: string;
   username: string;
+  email?: string; // Opcional
+  password: string;
+  phoneNumber?: string; // Nuevo: datos personales
+  fullName?: string; // Nuevo: datos personales
   deviceId?: string;
   deviceInfo?: any;
 }
 
 export interface CompleteProfileData {
-  email: string;
-  password: string;
   username: string;
+  email?: string;
+  password: string;
+  phoneNumber?: string;
+  fullName?: string;
 }
 
 export interface AuthResponse {

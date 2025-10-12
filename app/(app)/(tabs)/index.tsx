@@ -1,4 +1,6 @@
+import { useCreateReport } from '@/hooks/useReports';
 import { authService } from '@/services/auth';
+import { CreateReportData } from '@/services/reports';
 import { useAuthStore } from '@/store/authStore';
 import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
@@ -16,7 +18,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import uuid from 'react-native-uuid';
 
 const { height } = Dimensions.get('window');
 const HOLD_DURATION = 3000; // 3 segundos
@@ -39,10 +40,10 @@ const EMERGENCY_TYPES: EmergencyType[] = [
 export default function HomeScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
+  const { mutateAsync: createReport, isPending: isCreatingReport } = useCreateReport();
   const [isHolding, setIsHolding] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showTypeModal, setShowTypeModal] = useState(false);
-  const [isCreatingReport, setIsCreatingReport] = useState(false);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
@@ -138,18 +139,17 @@ export default function HomeScreen() {
   };
 
   const createEmergencyReport = async (type: EmergencyType) => {
-    setIsCreatingReport(true);
-
     try {
+      // 🔹 PASO 1: Crear usuario anónimo si no está autenticado
       if (!isAuthenticated || !user) {
         console.log('📱 Creando usuario anónimo...');
 
-        const deviceId = uuid.v4() as string;
+        const deviceId = `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const deviceInfo = {
-          modelName: Device.modelName,
-          osName: Device.osName,
-          osVersion: Device.osVersion,
-          brand: Device.brand,
+          modelName: Device.modelName || 'Unknown',
+          osName: Device.osName || 'Unknown',
+          osVersion: Device.osVersion || 'Unknown',
+          brand: Device.brand || 'Unknown',
         };
 
         const response = await authService.createAnonymous({
@@ -158,17 +158,37 @@ export default function HomeScreen() {
         });
 
         if (!response.data) {
-          Alert.alert('Error', 'No se pudo crear el usuario');
+          Alert.alert('Error', 'No se pudo crear el usuario anónimo');
           return;
         }
+
+        console.log('✅ Usuario anónimo creado:', response.data.user.id);
       }
 
-      console.log('📝 Creando reporte:', type);
+      // 🔹 PASO 2: Crear el reporte de emergencia
+      console.log('📝 Creando reporte de tipo:', type.id);
+
+      const reportData: CreateReportData = {
+        type: type.id,
+        // TODO: Agregar ubicación si tienes permisos
+        // latitude: ...,
+        // longitude: ...,
+        // address: ...,
+      };
+
+      const reportResponse = await createReport(reportData);
+
+      if (!reportResponse.data) {
+        throw new Error('No se recibió respuesta del servidor');
+      }
+
+      // 🔹 PASO 3: Feedback de éxito
+      console.log('✅ Reporte creado exitosamente:', reportResponse.data.id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       Alert.alert(
         '✅ Reporte Enviado',
-        `Tu reporte de ${type.name} ha sido enviado. Los bomberos han sido notificados.`,
+        `Tu reporte de ${type.name} ha sido enviado correctamente. ID: ${reportResponse.data.id}`,
         [
           {
             text: 'Ver Reportes',
@@ -179,11 +199,13 @@ export default function HomeScreen() {
       );
 
     } catch (error) {
-      console.error('Error:', error);
+      console.error('❌ Error creando reporte:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'No se pudo enviar el reporte');
-    } finally {
-      setIsCreatingReport(false);
+
+      Alert.alert(
+        'Error',
+        'No se pudo enviar el reporte. Verifica tu conexión e intenta nuevamente.'
+      );
     }
   };
 

@@ -40,26 +40,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="informes"
-        options={{
-          title: 'Informes',
-          tabBarIcon: ({ color }) => <TabBarIcon name="chart" color={color} />,
-        }}
-        listeners={{
-          tabPress: (e) => {
-            // Bloquear acceso si no está autenticado
-            if (!isAuthenticated) {
-              e.preventDefault();
-              router.push('/(app)/(tabs)/profile');
-            }
-          },
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Perfil',
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+        }}
+      />
+      {/* Informes oculto del navbar - se accede desde el perfil */}
+      <Tabs.Screen
+        name="informes"
+        options={{
+          href: null, // Ocultar del navbar
         }}
       />
     </Tabs>

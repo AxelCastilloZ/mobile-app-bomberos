@@ -126,6 +126,26 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Botón Informes - Solo para bomberos/staff */}
+        {!user.isAnonymous && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Panel de Control</Text>
+            <TouchableOpacity
+              style={styles.informesButton}
+              onPress={() => router.push('/(app)/(tabs)/informes')}
+            >
+              <Text style={styles.informesIcon}>📊</Text>
+              <View style={styles.informesTextContainer}>
+                <Text style={styles.informesTitle}>Informes</Text>
+                <Text style={styles.informesSubtitle}>
+                  Gestionar informes detallados
+                </Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Información de Cuenta</Text>
 
@@ -374,5 +394,37 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  informesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#dc3545',
+  },
+  informesIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  informesTextContainer: {
+    flex: 1,
+  },
+  informesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 2,
+  },
+  informesSubtitle: {
+    fontSize: 13,
+    color: '#666',
+  },
+  chevron: {
+    fontSize: 24,
+    color: '#dc3545',
+    fontWeight: 'bold',
   },
 });
