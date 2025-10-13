@@ -1,8 +1,8 @@
+import { useLocation } from '@/hooks/useLocation';
 import { useCreateReport } from '@/hooks/useReports';
-import { authService } from '@/services/auth';
-import { CreateReportData } from '@/services/reports';
 import { useAuthStore } from '@/store/authStore';
-import * as Device from 'expo-device';
+import { useLocationStore } from '@/store/locationStore';
+import { CreateReportData } from '@/types/reports';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -40,7 +40,10 @@ const EMERGENCY_TYPES: EmergencyType[] = [
 export default function HomeScreen() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
+  const { currentLocation } = useLocationStore();
+  const { hasPermission, requestPermission, getCurrentLocation } = useLocation();
   const { mutateAsync: createReport, isPending: isCreatingReport } = useCreateReport();
+
   const [isHolding, setIsHolding] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showTypeModal, setShowTypeModal] = useState(false);
@@ -140,41 +143,73 @@ export default function HomeScreen() {
 
   const createEmergencyReport = async (type: EmergencyType) => {
     try {
-      // 🔹 PASO 1: Crear usuario anónimo si no está autenticado
-      if (!isAuthenticated || !user) {
-        console.log('📱 Creando usuario anónimo...');
+      // 🔹 PASO 1: Obtener ubicación (REQUERIDA)
+      let location = currentLocation;
 
-        const deviceId = `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const deviceInfo = {
-          modelName: Device.modelName || 'Unknown',
-          osName: Device.osName || 'Unknown',
-          osVersion: Device.osVersion || 'Unknown',
-          brand: Device.brand || 'Unknown',
-        };
+      // Si no hay ubicación en el store, intentar obtenerla ahora
+      if (!location) {
+        console.log('📍 No hay ubicación en store, obteniendo...');
 
-        const response = await authService.createAnonymous({
-          deviceId,
-          deviceInfo,
-        });
-
-        if (!response.data) {
-          Alert.alert('Error', 'No se pudo crear el usuario anónimo');
+        // Verificar permisos
+        if (!hasPermission) {
+          Alert.alert(
+            'Ubicación Requerida',
+            'Se necesita tu ubicación para reportar la emergencia. ¿Deseas habilitar los permisos?',
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              {
+                text: 'Habilitar',
+                onPress: async () => {
+                  const granted = await requestPermission();
+                  if (granted) {
+                    // Reintentar después de obtener permisos
+                    createEmergencyReport(type);
+                  } else {
+                    Alert.alert(
+                      'Permisos Denegados',
+                      'No se puede crear el reporte sin ubicación.'
+                    );
+                  }
+                },
+              },
+            ]
+          );
           return;
         }
 
-        console.log('✅ Usuario anónimo creado:', response.data.user.id);
+        // Intentar obtener ubicación
+        try {
+          location = await getCurrentLocation();
+        } catch (error) {
+          console.error('❌ Error obteniendo ubicación:', error);
+        }
+
+        // Si aún no hay ubicación, no se puede continuar
+        if (!location) {
+          Alert.alert(
+            'Error',
+            'No se pudo obtener tu ubicación. Verifica que el GPS esté habilitado e intenta nuevamente.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
       }
 
-      // 🔹 PASO 2: Crear el reporte de emergencia
+      // 🔹 PASO 2: Crear el reporte CON ubicación
       console.log('📝 Creando reporte de tipo:', type.id);
+      console.log('📍 Ubicación:', {
+        lat: location.coordinates.latitude,
+        lng: location.coordinates.longitude,
+      });
 
       const reportData: CreateReportData = {
         type: type.id,
-        // TODO: Agregar ubicación si tienes permisos
-        // latitude: ...,
-        // longitude: ...,
-        // address: ...,
+        latitud: location.coordinates.latitude,
+        longitud: location.coordinates.longitude,
+        ...(user?.isAnonymous && { mobileUserId: user.id }), // ✅ Solo si es anónimo
       };
+
+      console.log('📤 Enviando reporte:', reportData);
 
       const reportResponse = await createReport(reportData);
 
@@ -186,9 +221,13 @@ export default function HomeScreen() {
       console.log('✅ Reporte creado exitosamente:', reportResponse.data.id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      const locationInfo = location.address?.formatted
+        ? `\n📍 ${location.address.formatted}`
+        : `\n📍 Lat: ${location.coordinates.latitude.toFixed(4)}, Lon: ${location.coordinates.longitude.toFixed(4)}`;
+
       Alert.alert(
         '✅ Reporte Enviado',
-        `Tu reporte de ${type.name} ha sido enviado correctamente. ID: ${reportResponse.data.id}`,
+        `Tu reporte de ${type.name} ha sido enviado correctamente.${locationInfo}\n\nID: ${reportResponse.data.id}`,
         [
           {
             text: 'Ver Reportes',
@@ -197,7 +236,6 @@ export default function HomeScreen() {
           { text: 'OK' },
         ]
       );
-
     } catch (error) {
       console.error('❌ Error creando reporte:', error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -230,6 +268,12 @@ export default function HomeScreen() {
             ? 'Ciudadano Registrado'
             : 'Sistema de Emergencias'}
         </Text>
+        {/* Indicador de ubicación */}
+        {currentLocation && (
+          <Text style={styles.locationIndicator}>
+            📍 {currentLocation.address?.city || currentLocation.address?.formatted || 'Ubicación detectada'}
+          </Text>
+        )}
       </View>
 
       {/* Botón centrado grande */}
@@ -357,6 +401,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginTop: 2,
+  },
+  locationIndicator: {
+    fontSize: 11,
+    color: '#28a745',
+    marginTop: 4,
   },
   mainContent: {
     flex: 1,
