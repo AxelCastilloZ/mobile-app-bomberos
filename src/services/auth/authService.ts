@@ -1,11 +1,10 @@
 import { useAuthStore } from '../../store/authStore';
 import {
-    AnonymousData,
-    AuthResponse,
-    CompleteProfileData,
-    DeviceLoginData,
-    LoginCredentials,
-    RegisterData,
+  AnonymousData,
+  AuthResponse,
+  CompleteProfileData,
+  DeviceLoginData,
+  LoginCredentials,
 } from '../../types/auth';
 import { apiClient, ApiResponse } from '../api/apiClient';
 
@@ -13,7 +12,6 @@ export class AuthService {
   private readonly endpoints = {
     anonymous: '/mobile/auth/anonymous',
     device: '/mobile/auth/device',
-    register: '/mobile/auth/register',
     login: '/mobile/auth/login',
     completeProfile: '/mobile/auth/complete-profile',
   };
@@ -63,32 +61,10 @@ export class AuthService {
   }
 
   /**
-   * Registro de ciudadano
-   */
-  async register(data: RegisterData): Promise<ApiResponse<AuthResponse>> {
-    console.log('[AuthService] Registrando ciudadano...');
-
-    const response = await apiClient.post<AuthResponse>(
-      this.endpoints.register,
-      data
-    );
-
-    if (response.data) {
-      await useAuthStore.getState().setAuth(
-        response.data.access_token,
-        response.data.user
-      );
-      console.log('[AuthService] Registro exitoso');
-    }
-
-    return response;
-  }
-
-  /**
-   * Login de ciudadano (email/password)
+   * Login (username/password) - Ciudadanos y Bomberos
    */
   async login(credentials: LoginCredentials): Promise<ApiResponse<AuthResponse>> {
-    console.log('[AuthService] Login de ciudadano...');
+    console.log('[AuthService] Login...');
 
     const response = await apiClient.post<AuthResponse>(
       this.endpoints.login,
@@ -108,6 +84,7 @@ export class AuthService {
 
   /**
    * Completar perfil (anónimo → ciudadano)
+   * Requiere estar autenticado como usuario anónimo
    */
   async completeProfile(data: CompleteProfileData): Promise<ApiResponse<AuthResponse>> {
     console.log('[AuthService] Completando perfil...');

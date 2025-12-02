@@ -1,4 +1,8 @@
+
+
+// app/(auth)/complete-profile.tsx
 import { authService } from '@/services/auth';
+import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
@@ -15,9 +19,11 @@ import {
     View,
 } from 'react-native';
 
-export default function RegisterScreen() {
+export default function CompleteProfileScreen() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const { user } = useAuthStore();
+
+  const [username, setUsername] = useState(user?.username || '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -42,8 +48,8 @@ export default function RegisterScreen() {
       return false;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+    if (password.length < 8) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres');
       return false;
     }
 
@@ -55,35 +61,56 @@ export default function RegisterScreen() {
     return true;
   };
 
-  const handleRegister = async () => {
+  const handleCompleteProfile = async () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
 
     try {
-      const response = await authService.register({
+      const response = await authService.completeProfile({
         username,
         email,
         password,
       });
 
       if (response.data) {
-        // Registro exitoso
         Alert.alert(
-          '¡Registro exitoso!',
-          'Tu cuenta ha sido creada correctamente',
+          '¡Perfil Completado!',
+          'Tu cuenta ha sido registrada correctamente. Ahora puedes acceder a todas las funciones.',
           [{ text: 'OK', onPress: () => router.replace('/(app)/(tabs)') }]
         );
       } else {
-        Alert.alert('Error', response.error || 'No se pudo crear la cuenta');
+        Alert.alert('Error', response.error || 'No se pudo completar el perfil');
       }
     } catch (error) {
-      console.error('Register error:', error);
+      console.error('Complete profile error:', error);
       Alert.alert('Error', 'No se pudo conectar con el servidor');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Si no hay usuario anónimo, no debería estar aquí
+  if (!user || !user.isAnonymous) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="dark" />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Acceso no permitido</Text>
+          <Text style={styles.errorText}>
+            Esta pantalla es solo para usuarios anónimos que desean completar su perfil.
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.replace('/(app)/(tabs)')}
+          >
+            <Text style={styles.backButtonText}>Volver al Inicio</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -98,15 +125,21 @@ export default function RegisterScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={styles.backButtonHeader}
             onPress={() => router.back()}
           >
-            <Text style={styles.backButtonText}>← Volver</Text>
+            <Text style={styles.backButtonHeaderText}>← Volver</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Crear Cuenta</Text>
+          <Text style={styles.title}>Completar Perfil</Text>
           <Text style={styles.subtitle}>
-            Completa tus datos para registrarte
+            Registra tus datos para acceder a todas las funciones
           </Text>
+        </View>
+
+        {/* Info actual */}
+        <View style={styles.currentInfo}>
+          <Text style={styles.currentInfoLabel}>Tu ID actual:</Text>
+          <Text style={styles.currentInfoValue}>{user.id}</Text>
         </View>
 
         {/* Form */}
@@ -115,10 +148,10 @@ export default function RegisterScreen() {
             <Text style={styles.label}>Nombre de Usuario</Text>
             <TextInput
               style={styles.input}
-              placeholder="Tu nombre"
+              placeholder="Tu nombre de usuario"
               value={username}
               onChangeText={setUsername}
-              autoCapitalize="words"
+              autoCapitalize="none"
               editable={!isLoading}
             />
           </View>
@@ -142,7 +175,7 @@ export default function RegisterScreen() {
             <View style={styles.passwordContainer}>
               <TextInput
                 style={[styles.input, styles.passwordInput]}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -185,21 +218,22 @@ export default function RegisterScreen() {
 
           <TouchableOpacity
             style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleRegister}
+            onPress={handleCompleteProfile}
             disabled={isLoading}
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Crear Cuenta</Text>
+              <Text style={styles.buttonText}>Completar Registro</Text>
             )}
           </TouchableOpacity>
 
-          <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>¿Ya tienes cuenta? </Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-              <Text style={styles.loginLink}>Inicia sesión</Text>
-            </TouchableOpacity>
+          {/* Beneficios */}
+          <View style={styles.benefitsBox}>
+            <Text style={styles.benefitsTitle}>✨ Beneficios de registrarte:</Text>
+            <Text style={styles.benefitItem}>• Historial de tus reportes</Text>
+            <Text style={styles.benefitItem}>• Notificaciones de estado</Text>
+            <Text style={styles.benefitItem}>• Acceso desde cualquier dispositivo</Text>
           </View>
         </View>
       </ScrollView>
@@ -219,12 +253,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  backButton: {
+  backButtonHeader: {
     marginBottom: 16,
   },
-  backButtonText: {
+  backButtonHeaderText: {
     color: '#dc3545',
     fontSize: 16,
   },
@@ -237,6 +271,24 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: '#666',
+  },
+  currentInfo: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  currentInfoLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  currentInfoValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a1a1a',
   },
   form: {
     flex: 1,
@@ -294,18 +346,56 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  loginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  benefitsBox: {
+    backgroundColor: '#e8f5e9',
+    borderRadius: 12,
+    padding: 16,
     marginTop: 24,
   },
-  loginText: {
-    color: '#666',
+  benefitsTitle: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#2e7d32',
+    marginBottom: 8,
   },
-  loginLink: {
-    color: '#dc3545',
+  benefitItem: {
     fontSize: 14,
+    color: '#2e7d32',
+    marginBottom: 4,
+  },
+  // Error state
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 24,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  backButton: {
+    backgroundColor: '#dc3545',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

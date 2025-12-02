@@ -1,63 +1,68 @@
+// app/(app)/(tabs)/profile.tsx
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
+import { isStaff } from '@/types/auth';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user } = useAuthStore();
 
   const handleLogout = async () => {
     await authService.logout();
-    // Recargar la misma pantalla para mostrar login
   };
 
-  // Si NO está autenticado, mostrar opciones de login
-  if (!isAuthenticated || !user) {
+  // ========== SIN USUARIO (no ha hecho ningún reporte aún) ==========
+  if (!user) {
     return (
       <View style={styles.container}>
         <StatusBar style="dark" />
 
         <View style={styles.guestHeader}>
           <View style={styles.guestAvatar}>
-            <Text style={styles.guestAvatarText}>?</Text>
+            <Text style={styles.guestAvatarText}>👤</Text>
           </View>
-          <Text style={styles.guestTitle}>¡Hola!</Text>
+          <Text style={styles.guestTitle}>¡Bienvenido!</Text>
           <Text style={styles.guestSubtitle}>
-            Inicia sesión o crea una cuenta
+            Aún no tienes una sesión activa
           </Text>
         </View>
 
         <View style={styles.guestContent}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.push('/(auth)/login')}
-          >
-            <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>
-          </TouchableOpacity>
+          {/* Login para bomberos/personal */}
+          <View style={styles.staffSection}>
+            <Text style={styles.staffTitle}>¿Eres personal de bomberos?</Text>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => router.push('/(auth)/login')}
+            >
+              <Text style={styles.primaryButtonText}>Iniciar Sesión</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => router.push('/(auth)/register')}
-          >
-            <Text style={styles.secondaryButtonText}>Crear Cuenta</Text>
-          </TouchableOpacity>
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Ciudadanos</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
           <View style={styles.infoBox}>
+            <Text style={styles.infoTitle}>💡 ¿Sabías que?</Text>
             <Text style={styles.infoText}>
-              💡 Puedes reportar emergencias sin cuenta, pero al crear una podrás:
+              Puedes reportar emergencias sin necesidad de crear una cuenta.
             </Text>
-            <Text style={styles.bulletPoint}>• Ver historial de tus reportes</Text>
-            <Text style={styles.bulletPoint}>• Recibir notificaciones de estado</Text>
-            <Text style={styles.bulletPoint}>• Acceder a secciones especiales</Text>
+            <Text style={styles.infoTextSmall}>
+              Al hacer tu primer reporte, se creará automáticamente un perfil anónimo para ti.
+            </Text>
           </View>
         </View>
       </View>
     );
   }
 
-  // Si el usuario es ANÓNIMO, mostrar opción de completar perfil
+  // ========== USUARIO ANÓNIMO ==========
   if (user.isAnonymous) {
     return (
       <View style={styles.container}>
@@ -69,27 +74,40 @@ export default function ProfileScreen() {
               {user.username?.charAt(0).toUpperCase() || '?'}
             </Text>
           </View>
-          <Text style={styles.name}>{user.username || 'Usuario Anónimo'}</Text>
+          <Text style={styles.name}>{user.username || 'Usuario'}</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>Usuario Anónimo</Text>
           </View>
         </View>
 
         <ScrollView style={styles.content}>
+          {/* Opción para completar perfil */}
           <View style={styles.upgradeBox}>
             <Text style={styles.upgradeIcon}>✨</Text>
             <Text style={styles.upgradeTitle}>Completa tu Perfil</Text>
             <Text style={styles.upgradeText}>
-              Registra tu cuenta para acceder a todas las funciones
+              Registra tus datos para acceder a más funciones y recibir actualizaciones de tus reportes
             </Text>
             <TouchableOpacity
               style={styles.upgradeButton}
-              onPress={() => router.push('/(auth)/register')}
+              onPress={() => router.push('/(auth)/complete-profile')}
             >
               <Text style={styles.upgradeButtonText}>Completar Perfil</Text>
             </TouchableOpacity>
           </View>
 
+          {/* Login para bomberos */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>¿Eres personal de bomberos?</Text>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => router.push('/(auth)/login')}
+            >
+              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Info del usuario */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Información</Text>
             <View style={styles.infoItem}>
@@ -97,7 +115,7 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>{user.id}</Text>
             </View>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Nombre de Usuario</Text>
+              <Text style={styles.infoLabel}>Nombre</Text>
               <Text style={styles.infoValue}>{user.username}</Text>
             </View>
             <View style={styles.infoItem}>
@@ -110,24 +128,31 @@ export default function ProfileScreen() {
     );
   }
 
-  // Usuario REGISTRADO
+  // ========== USUARIO REGISTRADO (Ciudadano o Bombero) ==========
+  const userIsStaff = isStaff(user);
+
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
 
       <View style={styles.header}>
-        <View style={styles.avatar}>
+        <View style={[styles.avatar, userIsStaff && styles.avatarStaff]}>
           <Text style={styles.avatarText}>
             {user.username?.charAt(0).toUpperCase() || '?'}
           </Text>
         </View>
         <Text style={styles.name}>{user.username || 'Usuario'}</Text>
         <Text style={styles.email}>{user.email || 'Sin correo'}</Text>
+        {userIsStaff && (
+          <View style={styles.staffBadge}>
+            <Text style={styles.staffBadgeText}>🚒 Personal de Bomberos</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Botón Informes - Solo para bomberos/staff */}
-        {!user.isAnonymous && (
+        {/* Panel de Control - Solo para staff */}
+        {userIsStaff && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Panel de Control</Text>
             <TouchableOpacity
@@ -138,7 +163,7 @@ export default function ProfileScreen() {
               <View style={styles.informesTextContainer}>
                 <Text style={styles.informesTitle}>Informes</Text>
                 <Text style={styles.informesSubtitle}>
-                  Gestionar informes detallados
+                  Gestionar informes y estadísticas
                 </Text>
               </View>
               <Text style={styles.chevron}>›</Text>
@@ -146,6 +171,7 @@ export default function ProfileScreen() {
           </View>
         )}
 
+        {/* Información de cuenta */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Información de Cuenta</Text>
 
@@ -161,15 +187,25 @@ export default function ProfileScreen() {
 
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Correo Electrónico</Text>
-            <Text style={styles.infoValue}>{user.email}</Text>
+            <Text style={styles.infoValue}>{user.email || 'No registrado'}</Text>
           </View>
 
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Tipo de Cuenta</Text>
-            <Text style={styles.infoValue}>Registrado</Text>
+            <Text style={styles.infoValue}>
+              {userIsStaff ? 'Personal de Bomberos' : 'Ciudadano Registrado'}
+            </Text>
           </View>
+
+          {user.roles && user.roles.length > 0 && (
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Roles</Text>
+              <Text style={styles.infoValue}>{user.roles.join(', ')}</Text>
+            </View>
+          )}
         </View>
 
+        {/* Cerrar Sesión */}
         <View style={styles.section}>
           <TouchableOpacity
             style={styles.logoutButton}
@@ -188,6 +224,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  // Header
   header: {
     backgroundColor: '#fff',
     paddingTop: 60,
@@ -205,6 +242,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  avatarStaff: {
+    backgroundColor: '#28a745',
   },
   avatarText: {
     fontSize: 32,
@@ -235,6 +275,20 @@ const styles = StyleSheet.create({
     color: '#856404',
     fontWeight: '600',
   },
+  staffBadge: {
+    backgroundColor: '#d4edda',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#28a745',
+  },
+  staffBadgeText: {
+    fontSize: 12,
+    color: '#155724',
+    fontWeight: '600',
+  },
+  // Content
   content: {
     flex: 1,
     padding: 20,
@@ -266,7 +320,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1a1a1a',
     fontWeight: '500',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
+  // Buttons
   logoutButton: {
     backgroundColor: '#fff',
     borderWidth: 2,
@@ -280,6 +337,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  loginButton: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#dc3545',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  loginButtonText: {
+    color: '#dc3545',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Guest
   guestHeader: {
     backgroundColor: '#fff',
     paddingTop: 60,
@@ -299,9 +370,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   guestAvatarText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#999',
+    fontSize: 40,
   },
   guestTitle: {
     fontSize: 24,
@@ -317,48 +386,72 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  // Staff Section
+  staffSection: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  staffTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 16,
+  },
   primaryButton: {
     backgroundColor: '#dc3545',
-    paddingVertical: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
     borderRadius: 12,
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 12,
   },
   primaryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
-  secondaryButton: {
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#dc3545',
-    paddingVertical: 16,
-    borderRadius: 12,
+  // Divider
+  divider: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginVertical: 20,
   },
-  secondaryButtonText: {
-    color: '#dc3545',
-    fontSize: 16,
-    fontWeight: '600',
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e0e0e0',
   },
+  dividerText: {
+    marginHorizontal: 16,
+    color: '#666',
+    fontSize: 14,
+  },
+  // Info Box
   infoBox: {
     backgroundColor: '#e3f2fd',
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1565c0',
+    marginBottom: 8,
   },
   infoText: {
     fontSize: 14,
     color: '#1565c0',
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  bulletPoint: {
-    fontSize: 14,
-    color: '#1565c0',
-    marginLeft: 8,
-    marginBottom: 4,
+  infoTextSmall: {
+    fontSize: 12,
+    color: '#1976d2',
+    fontStyle: 'italic',
   },
+  // Upgrade Box
   upgradeBox: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -391,10 +484,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   upgradeButtonText: {
-    color: '#fff',
+    color: '#1a1a1a',
     fontSize: 16,
     fontWeight: '600',
   },
+  // Informes Button
   informesButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,7 +497,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#dc3545',
+    borderColor: '#28a745',
   },
   informesIcon: {
     fontSize: 32,
@@ -424,7 +518,7 @@ const styles = StyleSheet.create({
   },
   chevron: {
     fontSize: 24,
-    color: '#dc3545',
+    color: '#28a745',
     fontWeight: 'bold',
   },
 });

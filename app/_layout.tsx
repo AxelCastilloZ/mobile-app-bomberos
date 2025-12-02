@@ -1,48 +1,100 @@
-import { authService } from '@/services/auth';
+// app/_layout.tsx
+import { useLocation } from '@/hooks/useLocation';
+import { queryClient } from '@/lib/queryClient';
 import { useAuthStore } from '@/store/authStore';
-import * as Device from 'expo-device';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, View } from 'react-native';
 
-export default function RootLayout() {
+function AppInitializer({ onReady }: { onReady: () => void }) {
+  const {
+    requestPermission,
+    getCurrentLocation,
+    startWatching,
+    hasPermission,
+  } = useLocation();
+
   useEffect(() => {
-    const initializeAnonymousUser = async () => {
-      const { isAuthenticated, user } = useAuthStore.getState();
-
-      // Si NO está autenticado Y NO tiene usuario → Crear anónimo
-      if (!isAuthenticated && !user) {
-        console.log('🔄 Inicializando usuario anónimo al inicio de la app...');
-
-        try {
-          const deviceId = `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          const deviceInfo = {
-            modelName: Device.modelName || 'Unknown',
-            osName: Device.osName || 'Unknown',
-            osVersion: Device.osVersion || 'Unknown',
-            brand: Device.brand || 'Unknown',
-          };
-
-          const response = await authService.createAnonymous({
-            deviceId,
-            deviceInfo,
-          });
-
-          if (response.data) {
-            console.log('✅ Usuario anónimo creado al inicio:', response.data.user.id);
-            console.log('✅ isAnonymous:', response.data.user.isAnonymous);
-          } else {
-            console.error('❌ Error creando usuario anónimo:', response.error);
-          }
-        } catch (error) {
-          console.error('❌ Excepción creando usuario anónimo:', error);
-        }
-      } else if (user) {
-        console.log('👤 Usuario ya existe:', user.id, '- isAnonymous:', user.isAnonymous);
-      }
-    };
-
-    initializeAnonymousUser();
+    initializeApp();
   }, []);
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  const initializeApp = async () => {
+    try {
+      // ========== 1. CARGAR SESIÓN EXISTENTE (si hay) ==========
+      console.log('🔐 [RootLayout] Cargando sesión guardada...');
+      await useAuthStore.getState().loadSession();
+
+      const { user } = useAuthStore.getState();
+
+      if (user) {
+        console.log('👤 [RootLayout] Sesión recuperada:', {
+          id: user.id,
+          isAnonymous: user.isAnonymous,
+        });
+      } else {
+        console.log('👤 [RootLayout] No hay sesión guardada (se creará al reportar)');
+      }
+
+      // ========== 2. UBICACIÓN ==========
+      console.log('📍 [RootLayout] Inicializando ubicación...');
+
+      if (!hasPermission) {
+        console.log('📍 [RootLayout] Solicitando permisos...');
+        const granted = await requestPermission();
+
+        if (!granted) {
+          console.warn('⚠️ [RootLayout] Permisos de ubicación denegados');
+          Alert.alert(
+            'Ubicación Deshabilitada',
+            'Para reportar emergencias con precisión, habilita los permisos de ubicación en la configuración.',
+            [{ text: 'Entendido' }]
+          );
+        }
+      }
+
+      if (hasPermission) {
+        console.log('📍 [RootLayout] Obteniendo ubicación inicial...');
+        const location = await getCurrentLocation();
+
+        if (location) {
+          console.log('✅ [RootLayout] Ubicación obtenida:', {
+            lat: location.coordinates.latitude,
+            lng: location.coordinates.longitude,
+          });
+
+          console.log('📍 [RootLayout] Iniciando tracking...');
+          await startWatching();
+          console.log('✅ [RootLayout] Tracking iniciado');
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ [RootLayout] Error en inicialización:', error);
+    } finally {
+      console.log('✅ [RootLayout] App lista');
+      onReady();
+    }
+  };
+
+  return null;
+}
+
+export default function RootLayout() {
+  const [isReady, setIsReady] = useState(false);
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#E53E3E" />
+        <AppInitializer onReady={() => setIsReady(true)} />
+      </View>
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Stack screenOptions={{ headerShown: false }} />
+    </QueryClientProvider>
+  );
 }

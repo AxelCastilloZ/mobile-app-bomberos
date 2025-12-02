@@ -1,22 +1,26 @@
+// app/(app)/(tabs)/index.tsx
 import { useLocation } from '@/hooks/useLocation';
 import { useCreateReport } from '@/hooks/useReports';
+import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/authStore';
 import { useLocationStore } from '@/store/locationStore';
 import { CreateReportData } from '@/types/reports';
+import { getOrCreateDeviceId } from '@/utils/deviceId';
+import * as Device from 'expo-device';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Dimensions,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const { height } = Dimensions.get('window');
@@ -39,7 +43,7 @@ const EMERGENCY_TYPES: EmergencyType[] = [
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user } = useAuthStore();
   const { currentLocation } = useLocationStore();
   const { hasPermission, requestPermission, getCurrentLocation } = useLocation();
   const { mutateAsync: createReport, isPending: isCreatingReport } = useCreateReport();
@@ -47,9 +51,52 @@ export default function HomeScreen() {
   const [isHolding, setIsHolding] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showTypeModal, setShowTypeModal] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const holdTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // ========== CREAR USUARIO ANÓNIMO SI NO EXISTE ==========
+  const ensureUserExists = async () => {
+    // Si ya hay usuario, retornarlo
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser) {
+      console.log('👤 [HomeScreen] Usuario existente:', currentUser.id);
+      return currentUser;
+    }
+
+    // No hay usuario → Crear anónimo
+    console.log('🔄 [HomeScreen] Creando usuario anónimo...');
+    setIsCreatingUser(true);
+
+    try {
+      const deviceId = await getOrCreateDeviceId();
+      const deviceInfo = {
+        modelName: Device.modelName || 'Unknown',
+        osName: Device.osName || 'Unknown',
+        osVersion: Device.osVersion || 'Unknown',
+        brand: Device.brand || 'Unknown',
+      };
+
+      const response = await authService.createAnonymous({
+        deviceId,
+        deviceInfo,
+      });
+
+      if (response.data) {
+        console.log('✅ [HomeScreen] Usuario anónimo creado:', response.data.user.id);
+        return response.data.user;
+      } else {
+        console.error('❌ [HomeScreen] Error creando usuario:', response.error);
+        throw new Error(response.error || 'No se pudo crear el usuario');
+      }
+    } catch (error) {
+      console.error('❌ [HomeScreen] Excepción creando usuario:', error);
+      throw error;
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
 
   const handlePressIn = () => {
     setIsHolding(true);
@@ -143,14 +190,24 @@ export default function HomeScreen() {
 
   const createEmergencyReport = async (type: EmergencyType) => {
     try {
-      // 🔹 PASO 1: Obtener ubicación (REQUERIDA)
+      // ========== PASO 1: ASEGURAR QUE EXISTE USUARIO ==========
+      let currentUser;
+      try {
+        currentUser = await ensureUserExists();
+      } catch (error) {
+        Alert.alert(
+          'Error',
+          'No se pudo crear tu sesión. Verifica tu conexión e intenta nuevamente.'
+        );
+        return;
+      }
+
+      // ========== PASO 2: OBTENER UBICACIÓN ==========
       let location = currentLocation;
 
-      // Si no hay ubicación en el store, intentar obtenerla ahora
       if (!location) {
         console.log('📍 No hay ubicación en store, obteniendo...');
 
-        // Verificar permisos
         if (!hasPermission) {
           Alert.alert(
             'Ubicación Requerida',
@@ -162,7 +219,6 @@ export default function HomeScreen() {
                 onPress: async () => {
                   const granted = await requestPermission();
                   if (granted) {
-                    // Reintentar después de obtener permisos
                     createEmergencyReport(type);
                   } else {
                     Alert.alert(
@@ -177,14 +233,12 @@ export default function HomeScreen() {
           return;
         }
 
-        // Intentar obtener ubicación
         try {
           location = await getCurrentLocation();
         } catch (error) {
           console.error('❌ Error obteniendo ubicación:', error);
         }
 
-        // Si aún no hay ubicación, no se puede continuar
         if (!location) {
           Alert.alert(
             'Error',
@@ -195,18 +249,19 @@ export default function HomeScreen() {
         }
       }
 
-      // 🔹 PASO 2: Crear el reporte CON ubicación
+      // ========== PASO 3: CREAR EL REPORTE ==========
       console.log('📝 Creando reporte de tipo:', type.id);
       console.log('📍 Ubicación:', {
         lat: location.coordinates.latitude,
         lng: location.coordinates.longitude,
       });
+      console.log('👤 Usuario:', currentUser.id);
 
       const reportData: CreateReportData = {
         type: type.id,
         latitud: location.coordinates.latitude,
         longitud: location.coordinates.longitude,
-        ...(user?.isAnonymous && { mobileUserId: user.id }), // ✅ Solo si es anónimo
+        mobileUserId: currentUser.id,
       };
 
       console.log('📤 Enviando reporte:', reportData);
@@ -217,7 +272,7 @@ export default function HomeScreen() {
         throw new Error('No se recibió respuesta del servidor');
       }
 
-      // 🔹 PASO 3: Feedback de éxito
+      // ========== PASO 4: FEEDBACK DE ÉXITO ==========
       console.log('✅ Reporte creado exitosamente:', reportResponse.data.id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -262,13 +317,10 @@ export default function HomeScreen() {
           {user?.username || 'Bienvenido'} 👋
         </Text>
         <Text style={styles.subtitle}>
-          {user?.isAnonymous
-            ? 'Usuario Anónimo'
-            : isAuthenticated
-            ? 'Ciudadano Registrado'
+          {user?.isAnonymous === false
+            ? 'Usuario Registrado'
             : 'Sistema de Emergencias'}
         </Text>
-        {/* Indicador de ubicación */}
         {currentLocation && (
           <Text style={styles.locationIndicator}>
             📍 {currentLocation.address?.city || currentLocation.address?.formatted || 'Ubicación detectada'}
@@ -288,10 +340,9 @@ export default function HomeScreen() {
               activeOpacity={1}
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
-              disabled={isCreatingReport}
+              disabled={isCreatingReport || isCreatingUser}
             >
               <View style={styles.emergencyButton}>
-                {/* Anillo de progreso */}
                 {isHolding && (
                   <Animated.View
                     style={[
@@ -303,7 +354,6 @@ export default function HomeScreen() {
                   </Animated.View>
                 )}
 
-                {/* Contenido del botón */}
                 <View style={styles.buttonContent}>
                   <Text style={styles.emergencyIcon}>🚨</Text>
                   <Text style={styles.emergencyTitle}>SOS</Text>
@@ -313,7 +363,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Indicador de progreso textual */}
           {isHolding && (
             <Text style={styles.progressText}>
               {Math.round(progress * 100)}%
@@ -367,11 +416,13 @@ export default function HomeScreen() {
       </Modal>
 
       {/* Loading */}
-      {isCreatingReport && (
+      {(isCreatingReport || isCreatingUser) && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color="#dc3545" />
-            <Text style={styles.loadingText}>Enviando reporte...</Text>
+            <Text style={styles.loadingText}>
+              {isCreatingUser ? 'Preparando...' : 'Enviando reporte...'}
+            </Text>
           </View>
         </View>
       )}

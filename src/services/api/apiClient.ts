@@ -1,7 +1,11 @@
 import { useAuthStore } from '@/store/authStore';
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+import Constants from 'expo-constants';
 
-const API_BASE_URL = 'http://192.168.100.5:3000';
+
+
+
+const API_BASE_URL = Constants.expoConfig?.extra?.apiEndpoint || 'http://localhost:3000';
 const REQUEST_TIMEOUT = 10000;
 
 export interface ApiResponse<T = any> {

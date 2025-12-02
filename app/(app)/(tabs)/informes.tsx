@@ -1,29 +1,37 @@
+// app/(app)/(tabs)/informes.tsx
 import { useAuthStore } from '@/store/authStore';
+import { isStaff } from '@/types/auth';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function InformesScreen() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuthStore();
+  const { user } = useAuthStore();
 
-  // Si no está autenticado, mostrar mensaje
-  if (!isAuthenticated) {
+  // Verificar si es personal autorizado (SUPERUSER, ADMIN, PERSONAL_BOMBERIL)
+  if (!isStaff(user)) {
     return (
       <View style={styles.container}>
         <StatusBar style="dark" />
         <View style={styles.lockContainer}>
           <Text style={styles.lockIcon}>🔒</Text>
-          <Text style={styles.lockTitle}>Sección Protegida</Text>
+          <Text style={styles.lockTitle}>Acceso Restringido</Text>
           <Text style={styles.lockSubtitle}>
-            Esta sección es solo para bomberos autorizados
+            Esta sección es exclusiva para personal de bomberos
           </Text>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => router.push('/(app)/(tabs)/profile')}
-          >
-            <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
-          </TouchableOpacity>
+          {!user || user.isAnonymous ? (
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => router.push('/(auth)/login')}
+            >
+              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.infoText}>
+              Tu cuenta no tiene permisos para acceder a esta sección
+            </Text>
+          )}
         </View>
       </View>
     );
@@ -111,6 +119,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 24,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: '#fff',
